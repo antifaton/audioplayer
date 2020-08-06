@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Audio Player</string>
+    <string name="newAct">new</string>
 </resources>
