@@ -12,6 +12,8 @@ import java.util.List;
 
 public class AdapterRecycler extends RecyclerView.Adapter<AdapterRecycler.MyViewHolder> {
 
+    private static onItemClickListener onItemClickListener;
+    private static final String TAG = "States";
     private List<Song> songs;
 
     public AdapterRecycler(List<Song> songs){
@@ -37,11 +39,26 @@ public class AdapterRecycler extends RecyclerView.Adapter<AdapterRecycler.MyView
         return songs.size();
     }
 
-    public class MyViewHolder extends RecyclerView.ViewHolder {
+    public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         TextView textView;
+
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
             textView = itemView.findViewById(R.id.songPath);
+            itemView.setOnClickListener(this);
         }
+
+        @Override
+        public void onClick(View v) {
+            onItemClickListener.onItemClick(getAdapterPosition(), v);
+        }
+    }
+
+    public void setOnItemClickListener(onItemClickListener onItemClickListener){
+        AdapterRecycler.onItemClickListener = onItemClickListener;
+    }
+
+    public interface onItemClickListener {
+        void onItemClick(int position, View v);
     }
 }
