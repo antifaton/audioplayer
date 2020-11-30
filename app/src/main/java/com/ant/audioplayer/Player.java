@@ -30,7 +30,6 @@ public class Player extends Fragment implements View.OnClickListener {
     private static final int REQUEST_CODE_PERMISSION_READEXTERNAL_STORAGE = 123;
     private static final String TAG = "States";
     private ImageButton btnRew, btnPlay, btnPause, btnFF;
-//    private MediaPlayer mPlayer;
     private Handler handler = new Handler();
     private TextView songName, startTime, songTime;
     private SeekBar songPrgs;
@@ -62,24 +61,24 @@ public class Player extends Fragment implements View.OnClickListener {
 //        mPlayer = new MediaPlayer();
         //loadPlayer();
         Log.d(TAG, "onCreateView");
+        serviceIntent = new Intent(getContext(), MyService.class);
         return view;
     }
 
     @Override
     public void onClick(View v) {
-        serviceIntent = new Intent(getContext(), MyService.class);
-        //Intent playButtonIntent = new Intent(getContext(), MyService.class);
 
         switch (v.getId()) {
             case R.id.btnPlay:
-                if (!Objects.equals(serviceIntent.getAction(), MyService.ACTION_PLAY)){
+                Log.d(TAG, "Action = "+serviceIntent.getAction());
+                if (!Objects.equals(serviceIntent.getAction(), MyService.ACTION_PAUSE) &&
+                        !Objects.equals(serviceIntent.getAction(), MyService.ACTION_PLAY)){
                     serviceIntent.setAction(MyService.ACTION_START_FOREGROUND_SERVICE);
-                    serviceIntent.putExtra("argPosExtra", argPos);
-                    getContext().startService(serviceIntent);
                 } else {
-                    serviceIntent.putExtra("argPosExtra", argPos);
                     serviceIntent.setAction(MyService.ACTION_PLAY);
                 }
+                serviceIntent.putExtra("argPosExtra", argPos);
+                getContext().startService(serviceIntent);
                 Log.d(TAG, "playing " + argPos + " song");
                 //mPlayer.start();
 //                endTime = mPlayer.getDuration();
@@ -101,6 +100,7 @@ public class Player extends Fragment implements View.OnClickListener {
                 break;
             case R.id.btnPause:
                 serviceIntent.setAction(MyService.ACTION_PAUSE);
+                getContext().startService(serviceIntent);
                 btnPlay.setEnabled(true);
                 btnPause.setEnabled(false);
 //                Thread thread = new Thread(new Runnable() {
@@ -117,6 +117,8 @@ public class Player extends Fragment implements View.OnClickListener {
 //                mPlayer.pause();
                 break;
             case R.id.btnBackward:
+                serviceIntent.setAction(MyService.ACTION_STOP_FOREGROUND_SERVICE);
+                getContext().stopService(serviceIntent);
 //                if (strtTime - rewTime > 0) {
 //                    strtTime = strtTime - ffTime;
 //                    mPlayer.seekTo(strtTime);
@@ -171,30 +173,17 @@ public class Player extends Fragment implements View.OnClickListener {
                     song.uri = songDao.getSongById(argPos).uri;
                     song.currentPosition = songDao.getSongById(argPos).currentPosition;
                 }
-//                try {
-//                    mPlayer = new MediaPlayer();
-//                    mPlayer.setDataSource(getContext(), Uri.parse(song.uri));
-//                    mPlayer.prepare();
-//                    mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-//                    mPlayer.seekTo(song.currentPosition);
-//                    //Log.d(TAG, "song curr poss in onResume is: " + song.currentPosition);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
                 handler.post(UpdateSongName);
             }
         });
         thread.start();
     }
 
-    public Integer getArgPos() {
-        return argPos;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        serviceIntent.setAction(MyService.ACTION_STOP_FOREGROUND_SERVICE);
-        getContext().stopService(serviceIntent);
-    }
+//    @Override
+//    public void onDestroy() {
+//        super.onDestroy();
+//        Log.d(TAG, "onDestroy: Player");
+//        serviceIntent.setAction(MyService.ACTION_STOP_FOREGROUND_SERVICE);
+//        getContext().stopService(serviceIntent);
+//    }
 }

@@ -32,7 +32,7 @@ import java.io.IOException;
 
 public class MyService extends Service {
 
-    private static final String TAG_FOREGROUND_SERVICE = "FOREGROUND_SERVICE";
+    private static final String TAG = "States";
     public static final String ACTION_START_FOREGROUND_SERVICE = "ACTION_START_FOREGROUND_SERVICE";
     public static final String ACTION_STOP_FOREGROUND_SERVICE = "ACTION_STOP_FOREGROUND_SERVICE";
     public static final String ACTION_PAUSE = "ACTION_PAUSE";
@@ -46,8 +46,6 @@ public class MyService extends Service {
     AppDatabase db;
     SongDao songDao;
 
-    Player player;
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -58,20 +56,21 @@ public class MyService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG_FOREGROUND_SERVICE, "My foreground service onCreate().");
+        Log.d(TAG, "My foreground service onCreate().");
+        mPlayer = new MediaPlayer();
+        startForegroundService();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String action = intent.getAction();
-            if(action!=null)
+            if (action != null)
                 switch (action) {
                     case ACTION_START_FOREGROUND_SERVICE:
                         argPos = intent.getExtras().getInt("argPosExtra");
-                        startForegroundService();
-                        Log.d(TAG_FOREGROUND_SERVICE, "onStartCommand: Start service");
-//                        argPos = player.getArguments().getInt("argPos");
+//                        startForegroundService();
+                        Log.d(TAG, "onStartCommand: Start service");
                         Thread thread = new Thread(new Runnable() {
                             @Override
                             public void run() {
@@ -79,18 +78,22 @@ public class MyService extends Service {
                                 songDao = db.songDao();
                                 Song song = songDao.getSongById(argPos);
                                 if (song == null) {
+                                    Log.d(TAG, "song is null");
                                     return;
                                 } else {
                                     //nameEx = songDao.getSongById(argPos).title;
                                     song.uri = songDao.getSongById(argPos).uri;
+                                    Log.d(TAG, "run: songUri is "+song.uri);
                                     song.currentPosition = songDao.getSongById(argPos).currentPosition;
                                 }
                                 try {
+                                    mPlayer.pause();
                                     mPlayer = new MediaPlayer();
                                     mPlayer.setDataSource(getBaseContext(), Uri.parse(song.uri));
                                     mPlayer.prepare();
                                     mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
                                     mPlayer.seekTo(song.currentPosition);
+                                    mPlayer.start();
                                     //Log.d(TAG, "song curr poss in onResume is: " + song.currentPosition);
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -103,8 +106,12 @@ public class MyService extends Service {
                         stopForegroundService();
                         break;
                     case ACTION_PLAY:
-                        Log.d(TAG_FOREGROUND_SERVICE, "onStartCommand: play button clicked");
-                        mPlayer.start();
+                        Log.d(TAG, "onStartCommand: play button clicked");
+                        if (mPlayer.isPlaying()) {
+                            Log.d(TAG, "onStartCommand: player is playing");
+                        } else {
+                            mPlayer.start();
+                        }
 //                endTime = mPlayer.getDuration();
 //                strtTime = mPlayer.getCurrentPosition();
 //                if (currTime == 0) {
@@ -121,7 +128,18 @@ public class MyService extends Service {
 //                handler.postDelayed(UpdateSongTime, 100);
                         break;
                     case ACTION_PAUSE:
-                        Log.d(TAG_FOREGROUND_SERVICE, "onStartCommand: pause button clicked");
+                        Log.d(TAG, "onStartCommand: pause button clicked");
+                        Thread thread2 = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                db = App.getInstance().getDatabase();
+                                songDao = db.songDao();
+                                Song song = songDao.getSongById(argPos);
+                                song.currentPosition = mPlayer.getCurrentPosition();
+                                songDao.update(song);
+                            }
+                        });
+                        thread2.start();
                         mPlayer.pause();
                         break;
                 }
@@ -131,7 +149,7 @@ public class MyService extends Service {
 
     /* Used to build and start foreground service. */
     private void startForegroundService() {
-        Log.d(TAG_FOREGROUND_SERVICE, "Start foreground service.");
+        Log.d(TAG, "Start foreground service.");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel("my_service", "My Background Service");
         } else {
@@ -223,7 +241,7 @@ public class MyService extends Service {
 
 
     private void stopForegroundService() {
-        Log.d(TAG_FOREGROUND_SERVICE, "Stop foreground service.");
+        Log.d(TAG, "Stop foreground service.");
         // Stop foreground service and remove the notification.
         stopForeground(true);
         // Stop the foreground service.
