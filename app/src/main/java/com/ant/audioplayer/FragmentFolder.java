@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -24,6 +25,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import ir.androidexception.filepicker.dialog.DirectoryPickerDialog;
+import ir.androidexception.filepicker.dialog.MultiFilePickerDialog;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -36,6 +41,7 @@ public class FragmentFolder extends Fragment {
     List<Song> songs = new ArrayList<>();
     AdapterRecycler adapterRecycler;
     Button buttonAdd;
+    Button buttonFolder;
     AppDatabase db;
     SongDao songDao;
     Uri fileUri;
@@ -48,30 +54,36 @@ public class FragmentFolder extends Fragment {
         final View view = inflater.inflate(R.layout.fragment_folder, container, false);
         recyclerView = view.findViewById(R.id.fragmentList);
         buttonAdd = view.findViewById(R.id.fragmentButtonNewSong);
-        buttonAdd.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("audio/*");
-                int permissionStatus = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
-                if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
-                    startActivityForResult(intent, Pick_audio);
-                } else {
-                    ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                            REQUEST_CODE_PERMISSION_READEXTERNAL_STORAGE);
-                }
+        buttonFolder = view.findViewById(R.id.fragmentButtonNewFolder);
+        buttonAdd.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("audio/*");
+            int permissionStatus = ContextCompat.checkSelfPermission(Objects.requireNonNull(getContext()), Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (permissionStatus == PackageManager.PERMISSION_GRANTED) {
+                startActivityForResult(intent, Pick_audio);
+            } else {
+                ActivityCompat.requestPermissions(Objects.requireNonNull(getActivity()), new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_CODE_PERMISSION_READEXTERNAL_STORAGE);
+            }
+        });
+        buttonFolder.setOnClickListener(v -> {
+            if(permissionGranted()) {
+                DirectoryPickerDialog directoryPickerDialog = new DirectoryPickerDialog(getActivity(),
+                        () -> Toast.makeText(getContext(), "Canceled!!", Toast.LENGTH_SHORT).show(),
+                        files -> Toast.makeText(getContext(), files[0].getPath(), Toast.LENGTH_SHORT).show()
+                );
+                directoryPickerDialog.show();
+            } else {
+                requestPermission();
             }
         });
         adapterRecycler = new AdapterRecycler(songs);
-        adapterRecycler.setOnItemClickListener(new AdapterRecycler.onItemClickListener() {
-            @Override
-            public void onItemClick(int position, View v) {
-                Log.d(TAG, "Clicked: " + position + " and Position is " + (position + 1));
-                Bundle bundle = new Bundle();
-                bundle.putInt("argPos", position+1);
-                Log.d(TAG, "Bundle is: " + bundle.toString());
-                Navigation.findNavController(v).navigate(R.id.action_fragmentFolder_to_player, bundle);
-            }
+        adapterRecycler.setOnItemClickListener((position, v) -> {
+            Log.d(TAG, "Clicked: " + position + " and Position is " + (position + 1));
+            Bundle bundle = new Bundle();
+            bundle.putInt("argPos", position+1);
+            Log.d(TAG, "Bundle is: " + bundle.toString());
+            Navigation.findNavController(v).navigate(R.id.action_fragmentFolder_to_player, bundle);
         });
         recyclerView.setAdapter(adapterRecycler);
         return view;
@@ -89,6 +101,17 @@ public class FragmentFolder extends Fragment {
                 }
                 return;
         }
+    }
+
+    private boolean permissionGranted(){
+        return ContextCompat.checkSelfPermission(Objects.requireNonNull(getContext()),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(getContext(),
+                Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(Objects.requireNonNull(getActivity()),
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
     }
 
     @Override

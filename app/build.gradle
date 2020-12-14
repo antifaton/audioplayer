@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 29
     buildToolsVersion "29.0.3"
+    dataBinding {
+        enabled = true
+    }
 
     defaultConfig {
         applicationId "com.ant.audioplayer"
@@ -20,6 +23,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
@@ -30,9 +37,9 @@ dependencies {
     implementation 'androidx.room:room-runtime:2.2.2'
     implementation 'android.arch.navigation:navigation-fragment:1.0.0-alpha02'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'com.github.salehyarahmadi:FileAndFolderPicker:1.0.4'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     annotationProcessor 'androidx.room:room-compiler:2.2.2'
-
 }
