@@ -10,7 +10,7 @@
     android:background="@drawable/ugli">
 
     <TextView
-        android:id="@+id/songPath"
+        android:id="@+id/dataPath"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 

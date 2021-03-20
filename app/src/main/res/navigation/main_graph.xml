@@ -9,7 +9,18 @@
         android:name="com.ant.audioplayer.FragmentFolder"
         android:label="FragmentFolder" >
         <action
-            android:id="@+id/action_fragmentFolder_to_player"
+            android:id="@+id/action_fragmentFolder_to_fragmentSongs"
+            app:destination="@id/fragmentSongs" />
+    </fragment>
+    <fragment
+        android:id="@+id/fragmentSongs"
+        android:name="com.ant.audioplayer.FragmentSongs"
+        android:label="FragmentSongs" >
+        <action
+            android:id="@+id/action_fragmentSongs_to_fragmentFolder"
+            app:destination="@id/fragmentFolder" />
+        <action
+            android:id="@+id/action_fragmentSongs_to_player"
             app:destination="@id/player" />
     </fragment>
     <fragment
@@ -17,6 +28,9 @@
         android:name="com.ant.audioplayer.Player"
         android:label="fragment_player2"
         tools:layout="@layout/fragment_player2" >
+        <action
+            android:id="@+id/action_player_to_fragmentSongs"
+            app:destination="@id/fragmentSongs" />
         <action
             android:id="@+id/action_player_to_fragmentFolder"
             app:destination="@id/fragmentFolder" />

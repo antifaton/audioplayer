@@ -14,11 +14,13 @@ import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 import android.widget.TextView;
 
@@ -27,6 +29,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 
 import java.io.IOException;
 
@@ -37,20 +40,29 @@ public class MyService extends Service {
     public static final String ACTION_STOP_FOREGROUND_SERVICE = "ACTION_STOP_FOREGROUND_SERVICE";
     public static final String ACTION_PAUSE = "ACTION_PAUSE";
     public static final String ACTION_PLAY = "ACTION_PLAY";
+    public static final String ACTION_FORWARD = "ACTION_FORWARD";
+
 
     MediaPlayer mPlayer;
+    MyBinder binder = new MyBinder();
     private Handler handler = new Handler();
     private TextView songName, startTime, songTime;
     private static int currTime = 0, strtTime = 0, endTime = 0, ffTime = 5000, rewTime = 5000;
     Integer argPos;
+    int prevArgPos;
     AppDatabase db;
     SongDao songDao;
+    String songUri;
+    String nameEx;
+    Song nextSong;
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+//        // TODO: Return the communication channel to the service.
+//        throw new UnsupportedOperationException("Not yet implemented");
+        Log.d(TAG, "MyService onBind");
+        return binder;
     }
 
     @Override
@@ -69,7 +81,6 @@ public class MyService extends Service {
                 switch (action) {
                     case ACTION_START_FOREGROUND_SERVICE:
                         argPos = intent.getExtras().getInt("argPosExtra");
-//                        startForegroundService();
                         Log.d(TAG, "onStartCommand: Start service");
                         Thread thread = new Thread(new Runnable() {
                             @Override
@@ -84,17 +95,21 @@ public class MyService extends Service {
                                     //nameEx = songDao.getSongById(argPos).title;
                                     song.uri = songDao.getSongById(argPos).uri;
                                     Log.d(TAG, "run: songUri is "+song.uri);
+                                    Log.d(TAG, "run: songFolderPath is" + song.folderPath);
                                     song.currentPosition = songDao.getSongById(argPos).currentPosition;
                                 }
                                 try {
                                     mPlayer.pause();
                                     mPlayer = new MediaPlayer();
-                                    mPlayer.setDataSource(getBaseContext(), Uri.parse(song.uri));
+                                    mPlayer.setDataSource(song.uri);
                                     mPlayer.prepare();
                                     mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
                                     mPlayer.seekTo(song.currentPosition);
-                                    mPlayer.start();
-                                    //Log.d(TAG, "song curr poss in onResume is: " + song.currentPosition);
+                                    //mPlayer.start();
+                                    mPlayer.setOnCompletionListener(mp -> {
+                                        mPlayer.stop();
+                                        nextSong();
+                                    });
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -112,39 +127,69 @@ public class MyService extends Service {
                         } else {
                             mPlayer.start();
                         }
-//                endTime = mPlayer.getDuration();
-//                strtTime = mPlayer.getCurrentPosition();
-//                if (currTime == 0) {
-//                    songPrgs.setMax(endTime);
-//                    currTime = 1;
-//                }
-//                songTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(endTime),
-//                        TimeUnit.MILLISECONDS.toSeconds(endTime) -
-//                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(endTime))));
-//                startTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(strtTime),
-//                        TimeUnit.MILLISECONDS.toSeconds(strtTime) -
-//                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(strtTime))));
-//                songPrgs.setProgress(strtTime);
-//                handler.postDelayed(UpdateSongTime, 100);
                         break;
                     case ACTION_PAUSE:
                         Log.d(TAG, "onStartCommand: pause button clicked");
-                        Thread thread2 = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                db = App.getInstance().getDatabase();
-                                songDao = db.songDao();
-                                Song song = songDao.getSongById(argPos);
-                                song.currentPosition = mPlayer.getCurrentPosition();
-                                songDao.update(song);
-                            }
+                        Thread thread2 = new Thread(() -> {
+                            db = App.getInstance().getDatabase();
+                            songDao = db.songDao();
+                            Song song = songDao.getSongById(argPos);
+                            song.currentPosition = mPlayer.getCurrentPosition();
+                            songDao.update(song);
                         });
                         thread2.start();
                         mPlayer.pause();
                         break;
+                    case ACTION_FORWARD:
+                        Log.d(TAG, "onStartCommand: forward button clicked");
+                        if((mPlayer.getCurrentPosition()+5000) >= mPlayer.getDuration()){
+                            Log.d(TAG, "onStartCommand: Action_Forward: can't seekTo +5000 ");
+                        } else {
+                            mPlayer.seekTo(mPlayer.getCurrentPosition()+5000);
+                        }
                 }
         }
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void nextSong(){
+        prevArgPos = argPos;
+        argPos++;
+        Thread thread = new Thread(() -> {
+            db = App.getInstance().getDatabase();
+            songDao = db.songDao();
+            Song prevSong = songDao.getSongById(prevArgPos);
+            prevSong.currentPosition = 0;
+            songDao.update(prevSong);
+            Song song = songDao.getSongById(argPos);
+            if (song == null) {
+                Log.d(TAG, "song is null");
+                return;
+            } else {
+                nameEx = songDao.getSongById(argPos).name;
+                song.uri = songDao.getSongById(argPos).uri;
+                Log.d(TAG, "nextSong run: songUri is "+song.uri);
+                Log.d(TAG, "nextSong path is: " + song.uri.substring(0, song.folderPath.length()));
+                song.currentPosition = songDao.getSongById(argPos).currentPosition;
+            }
+            if(!song.uri.substring(0, song.folderPath.length()).equals(song.folderPath)){
+
+                Log.d(TAG, "nextSong()_run: song.uri doesn't equals song.folderPath ("+song.folderPath+")");
+                mPlayer.release();
+            } else {
+                try {
+                    mPlayer = new MediaPlayer();
+                    mPlayer.setDataSource(song.uri);
+                    mPlayer.prepare();
+                    mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                    mPlayer.seekTo(song.currentPosition);
+                    mPlayer.start();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
     }
 
     /* Used to build and start foreground service. */
@@ -246,5 +291,15 @@ public class MyService extends Service {
         stopForeground(true);
         // Stop the foreground service.
         stopSelf();
+    }
+
+    MediaPlayer getmPlayer(){
+        return this.mPlayer;
+    }
+
+    class MyBinder extends Binder {
+        MyService getService() {
+            return MyService.this;
+        }
     }
 }
