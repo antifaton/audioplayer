@@ -41,6 +41,7 @@ public class MyService extends Service {
     public static final String ACTION_PAUSE = "ACTION_PAUSE";
     public static final String ACTION_PLAY = "ACTION_PLAY";
     public static final String ACTION_FORWARD = "ACTION_FORWARD";
+    public static final String ACTION_BACKWARD = "ACTION_BACKWARD";
 
 
     MediaPlayer mPlayer;
@@ -145,8 +146,20 @@ public class MyService extends Service {
                         if((mPlayer.getCurrentPosition()+5000) >= mPlayer.getDuration()){
                             Log.d(TAG, "onStartCommand: Action_Forward: can't seekTo +5000 ");
                         } else {
+                            Log.d(TAG, "onStartCommand: mPlayer current position is "+mPlayer.getCurrentPosition());
                             mPlayer.seekTo(mPlayer.getCurrentPosition()+5000);
+                            Log.d(TAG, "onStartCommand: mPlayer current position is "+mPlayer.getCurrentPosition());
                         }
+                        break;
+                    case ACTION_BACKWARD:
+                        Log.d(TAG, "onStartCommand: backward button clicked");
+                        if((mPlayer.getCurrentPosition()-5000) < 0){
+                            mPlayer.seekTo(0);
+                            Log.d(TAG, "onStartCommand: Action_Backward: can't seekTo -5000 ");
+                        } else {
+                            mPlayer.seekTo(mPlayer.getCurrentPosition()-5000);
+                        }
+                        break;
                 }
         }
         return super.onStartCommand(intent, flags, startId);

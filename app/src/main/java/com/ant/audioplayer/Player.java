@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Player extends Fragment implements View.OnClickListener {
 
-    private static final String TAG = "States";
+    private static final String TAG = "Player/Player";
     private ImageButton btnRew, btnPlay, btnPause, btnFF;
     private Handler handler = new Handler();
     private TextView songName, startTime, songTime;
@@ -98,43 +98,45 @@ public class Player extends Fragment implements View.OnClickListener {
 
         switch (v.getId()) {
             case R.id.btnPlay:
-                //Log.d(TAG, "Action = "+serviceIntent.getAction());
-//                if (!Objects.equals(serviceIntent.getAction(), MyService.ACTION_PAUSE) &&
-//                        !Objects.equals(serviceIntent.getAction(), MyService.ACTION_PLAY)){
-//                    serviceIntent.setAction(MyService.ACTION_START_FOREGROUND_SERVICE);
-//                } else {
+                if (myService.getmPlayer().isPlaying()){
+                    Log.d(TAG, "onClick: player is playing");
+                } else {
                     serviceIntent.setAction(MyService.ACTION_PLAY);
-//                }
-                serviceIntent.putExtra("argPosExtra", argPos);
-                getContext().startService(serviceIntent);
-                //Log.d(TAG, "playing " + argPos + " song");
-                //mPlayer.start();
-                endTime = myService.getmPlayer().getDuration();
-                Log.d(TAG, "onClick: endTime is "+endTime);
-                strtTime = myService.getmPlayer().getCurrentPosition();
-                Log.d(TAG, "onClick: strtTime is "+strtTime);
-                songPrgs.setMax(endTime);
-                Log.d(TAG, "onClick: play -> songPrgs.setMax is "+songPrgs.getMax());
-                songTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(endTime),
-                        TimeUnit.MILLISECONDS.toSeconds(endTime) -
-                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(endTime))));
-                startTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(strtTime),
-                        TimeUnit.MILLISECONDS.toSeconds(strtTime) -
-                                TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(strtTime))));
-                songPrgs.setProgress(strtTime);
-                handler.postDelayed(UpdateSongTime, 100);
-                btnPlay.setEnabled(false);
-                btnPause.setEnabled(true);
+                    serviceIntent.putExtra("argPosExtra", argPos);
+                    getContext().startService(serviceIntent);
+                    //Log.d(TAG, "playing " + argPos + " song");
+                    //mPlayer.start();
+                    endTime = myService.getmPlayer().getDuration();
+                    Log.d(TAG, "onClick: endTime is " + endTime);
+                    strtTime = myService.getmPlayer().getCurrentPosition();
+                    Log.d(TAG, "onClick: strtTime is " + strtTime);
+                    songPrgs.setMax(endTime);
+                    Log.d(TAG, "onClick: play -> songPrgs.setMax is " + songPrgs.getMax());
+                    songTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(endTime),
+                            TimeUnit.MILLISECONDS.toSeconds(endTime) -
+                                    TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(endTime))));
+                    startTime.setText(String.format("%d min, %d sec", TimeUnit.MILLISECONDS.toMinutes(strtTime),
+                            TimeUnit.MILLISECONDS.toSeconds(strtTime) -
+                                    TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(strtTime))));
+                    songPrgs.setProgress(strtTime);
+                    handler.postDelayed(UpdateSongTime, 100);
+//                    btnPlay.setEnabled(false);
+//                    btnPause.setEnabled(true);
+                }
                 break;
             case R.id.btnPause:
-                serviceIntent.setAction(MyService.ACTION_PAUSE);
-                getContext().startService(serviceIntent);
-                btnPlay.setEnabled(true);
-                btnPause.setEnabled(false);
+                if (myService.getmPlayer().isPlaying()) {
+                    serviceIntent.setAction(MyService.ACTION_PAUSE);
+                    getContext().startService(serviceIntent);
+                } else {
+                    Log.d(TAG, "onClick: player is paused");
+                }
+//                btnPlay.setEnabled(true);
+//                btnPause.setEnabled(false);
                 break;
             case R.id.btnBackward:
-                serviceIntent.setAction(MyService.ACTION_STOP_FOREGROUND_SERVICE);
-                getContext().stopService(serviceIntent);
+                serviceIntent.setAction(MyService.ACTION_BACKWARD);
+                getContext().startService(serviceIntent);
                 break;
             case R.id.btnForward:
                 serviceIntent.setAction(MyService.ACTION_FORWARD);

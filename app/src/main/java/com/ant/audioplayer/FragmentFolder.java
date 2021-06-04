@@ -1,4 +1,4 @@
-package com.ant.audioplayer;
+ package com.ant.audioplayer;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -27,7 +27,7 @@ import ir.androidexception.filepicker.dialog.DirectoryPickerDialog;
 
 public class FragmentFolder extends Fragment {
 
-    private static final String TAG = "Player_FragmentFolder";
+    private static final String TAG = "Player/FragmentFolder";
     Handler handler = new Handler();
     List<ListItem> folders = new ArrayList<>();
     File folder;
@@ -67,7 +67,9 @@ public class FragmentFolder extends Fragment {
             Thread thread = new Thread(() -> {
                 db = App.getInstance().getDatabase();
                 folderDao = db.folderDao();
-                arg = folderDao.getFolderById(position + 1).uri;
+                Folder fold = (Folder) folders.get(position);
+                //arg = folderDao.getFolderById(position + 1).uri;
+                arg = fold.uri;
                 Log.d(TAG, "arg is: " + arg);
                 handler.post(updateArgFolder);
             });
@@ -149,6 +151,7 @@ public class FragmentFolder extends Fragment {
                         } else {
                             folderDao.insert(fold);
                             Log.d(TAG, "addFolder: folder added");
+
                             int b = 0;
                             for (File c : file) {
                                 Song song = new Song();
@@ -178,7 +181,6 @@ public class FragmentFolder extends Fragment {
         super.onResume();
         db = App.getInstance().getDatabase();
         LiveData<List<Folder>> listLiveData = db.folderDao().getAll();
-        //folderFiles = (List<Folder>) listLiveData;
         listLiveData.observe(this, books -> {                                                 //new Observer<List<Song>>()
             folders.clear();
             folders.addAll(books);
